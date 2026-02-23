@@ -1,30 +1,34 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# SFTP Data Extractor
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A standalone NestJS service that automatically synchronizes CSV files from an SFTP server, tracks changes with SQLite, and sends batch summaries to Telegram.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Overview
 
-## Description
+This service is designed for B2B businesses that receive stock lists via SFTP. Instead of manually downloading files, this automated service:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- 🔄 Syncs files 4 times daily (03:10, 09:10, 15:10, 21:10 EET)
+- 📊 Tracks file changes (new, modified, deleted, unchanged)
+- 💾 Stores all file versions with timestamps
+- 📱 Sends summary reports and files to Telegram
+- 🗄️ Uses SQLite database for tracking history
+
+## Features
+
+- **Scheduled Syncs**: Runs 10 minutes after files are published (giving upload time buffer)
+- **Change Detection**: Tracks files using modification time comparison
+- **File Versioning**: All downloaded files are timestamped and archived
+- **Telegram Integration**: Batch reports after each sync with file attachments
+- **Type-Safe Configuration**: Environment variables validated with Joi
+- **Standalone Service**: No HTTP server - pure background scheduler
+- **Error Handling**: Comprehensive error logging and Telegram error notifications
+
+## Architecture
+
+- **SFTP Module**: Connects to server, lists files, downloads CSV files
+- **Sync Module**: Orchestrates file comparison and download logic
+- **Telegram Module**: Sends formatted summaries and file attachments
+- **Scheduler Module**: Manages 4 daily cron jobs with EET timezone
+- **Database**: MikroORM with SQLite for file tracking
 
 ## Installation
 
@@ -32,42 +36,216 @@
 $ pnpm install
 ```
 
-## Running the app
+## Configuration
+
+1. Copy the example environment file:
+```bash
+$ cp .env.example .env
+```
+
+2. Fill in your credentials in `.env`:
+
+```env
+# SFTP Configuration
+SFTP_HOST=your-sftp-server.com
+SFTP_PORT=22
+SFTP_USERNAME=your_username
+SFTP_PASSWORD=your_password
+SFTP_TARGET_FOLDER=/path/to/stock/files
+
+# Telegram Configuration
+TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
+TELEGRAM_CHAT_ID=123456789
+
+# Application Configuration
+TIMEZONE=Europe/Kiev
+DATABASE_PATH=data/tracking.db
+```
+
+### Getting Telegram Credentials
+
+1. **Bot Token**: 
+   - Message [@BotFather](https://t.me/botfather) on Telegram
+   - Send `/newbot` and follow instructions
+   - Copy the token provided
+
+2. **Chat ID**:
+   - Message [@userinfobot](https://t.me/userinfobot) on Telegram
+   - Copy your user ID
+   - Or use a group chat ID to send to a group
+
+## Running the Service
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
+# Development mode (with auto-reload)
 $ pnpm run start:dev
 
-# production mode
+# Production mode
 $ pnpm run start:prod
+
+# Build for production
+$ pnpm run build
 ```
 
-## Test
+## Sync Schedule
+
+Files are synchronized at the following times (EET timezone):
+- **03:10** - Morning batch
+- **09:10** - Mid-morning batch  
+- **15:10** - Afternoon batch
+- **21:10** - Evening batch
+
+*10-minute buffer after upload times (03:00, 09:00, 15:00, 21:00) ensures files are fully uploaded before sync.*
+
+## File Storage
+
+Downloaded files are stored in the `data/` folder with timestamps:
+
+```
+data/
+├── tracking.db                           # SQLite database
+├── stocklist_20260223_031045.csv        # Original filename + timestamp
+├── stocklist_20260223_091032.csv
+└── ...
+```
+
+## Database Schema
+
+The `FileRecord` entity tracks:
+- `id`: Primary key
+- `filename`: Timestamped filename (stored locally)
+- `originalFilename`: Original name from SFTP
+- `storedPath`: Full local path
+- `sftpPath`: Remote path on SFTP
+- `fileSize`: File size in bytes
+- `lastModifiedOnSftp`: Modification time on SFTP
+- `downloadedAt`: When downloaded
+- `status`: `new`, `unchanged`, `modified`, or `deleted`
+
+## Telegram Notifications
+
+After each sync, you'll receive a formatted summary:
+
+```
+📊 SFTP Sync Report
+🕐 Feb 23, 2026, 3:10 AM
+
+🆕 New files: 2
+   • product_list.csv
+   • inventory.csv
+
+📝 Modified files: 1
+   • stocklist.csv
+
+✅ Unchanged: 5
+
+⚠️ Errors:
+   • None
+```
+
+New and modified files are automatically sent as attachments.
+
+## Monitoring
+
+Check logs for sync activity:
 
 ```bash
-# unit tests
-$ pnpm run test
+# View real-time logs in development
+$ pnpm run start:dev
 
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+# Production logs (using PM2 or similar)
+$ pm2 logs sftp-extractor
 ```
 
-## Support
+## Production Deployment
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Using PM2 (recommended):
 
-## Stay in touch
+```bash
+# Install PM2
+$ npm install -g pm2
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+# Build the project
+$ pnpm run build
+
+# Start with PM2
+$ pm2 start dist/main.js --name sftp-extractor
+
+# Save PM2 configuration
+$ pm2 save
+
+# Setup auto-restart on reboot
+$ pm2 startup
+```
+
+## Troubleshooting
+
+### SFTP Connection Failed
+- Verify credentials in `.env`
+- Check SFTP server accessibility and port
+- Ensure IP is whitelisted if required
+
+### Telegram Not Sending
+- Verify bot token is correct
+- Check chat ID matches your user/group
+- Ensure bot is started (send `/start` to your bot)
+- For groups, bot must be added as member
+
+### Database Errors
+- Ensure `data/` folder exists and is writable
+- Check disk space availability
+- Verify MikroORM migrations are up to date
+
+### Timezone Issues
+- Confirm `TIMEZONE` is set correctly (default: `Europe/Kiev`)
+- Verify system timezone if issues persist
+
+## Manual Database Inspection
+
+```bash
+# Open SQLite database
+$ sqlite3 data/tracking.db
+
+# List all tracked files
+sqlite> SELECT * FROM file_record ORDER BY downloaded_at DESC LIMIT 10;
+
+# Check deleted files
+sqlite> SELECT * FROM file_record WHERE status = 'deleted';
+```
+
+## Project Structure
+
+```
+src/
+├── config/
+│   ├── env.schema.ts          # Joi validation schema
+│   └── env.types.ts           # TypeScript type definitions
+├── entities/
+│   └── file-record.entity.ts  # MikroORM entity
+├── modules/
+│   ├── sftp/                  # SFTP connection & file operations
+│   ├── telegram/              # Telegram bot & messaging
+│   ├── sync/                  # File synchronization logic
+│   └── scheduler/             # Cron job scheduling
+├── app.module.ts              # Root module with all imports
+└── main.ts                    # Standalone application bootstrap
+```
+
+## Technologies
+
+- **NestJS** - Framework
+- **MikroORM** - Database ORM
+- **SQLite** - Database
+- **pure-js-sftp** - SFTP client
+- **grammy** - Telegram bot framework
+- **Joi** - Environment validation
+- **TypeScript** - Type safety
 
 ## License
 
-Nest is [MIT licensed](LICENSE).
+MIT
+
+## Support
+
+For issues or questions, please open an issue in the repository.
+
