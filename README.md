@@ -36,6 +36,11 @@ This service is designed for B2B businesses that receive stock lists via SFTP. I
 $ pnpm install
 ```
 
+> **Note**: If you encounter issues with `better-sqlite3`, you may need to run:
+> ```bash
+> $ pnpm approve-builds
+> ```
+
 ## Configuration
 
 1. Copy the example environment file:
