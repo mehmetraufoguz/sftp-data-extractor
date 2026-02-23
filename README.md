@@ -169,7 +169,7 @@ $ npm install -g pm2
 $ pnpm run build
 
 # Start with PM2
-$ pm2 start dist/main.js --name sftp-extractor
+$ pm2 start dist/src/main.js --name sftp-extractor
 
 # Save PM2 configuration
 $ pm2 save

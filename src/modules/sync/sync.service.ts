@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import { EntityRepository, EntityManager } from '@mikro-orm/sqlite';
+import { EntityRepository, EntityManager } from '@mikro-orm/core';
 import { FileRecord, FileStatus } from '../../entities/file-record.entity';
 import { SftpService, RemoteFile } from '../sftp/sftp.service';
 import { TelegramService } from '../telegram/telegram.service';
