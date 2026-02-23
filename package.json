@@ -15,7 +15,11 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "lint": "eslint \"{src,apps,libs}/**/*.ts\" --fix"
+    "lint": "eslint \"{src,apps,libs}/**/*.ts\" --fix",
+    "db:generate": "mikro-orm migration:create",
+    "db:migrate": "mikro-orm migration:up",
+    "db:rollback": "mikro-orm migration:down",
+    "db:reset": "mikro-orm migration:fresh"
   },
   "dependencies": {
     "@mikro-orm/better-sqlite": "^6.6.7",
@@ -33,6 +37,8 @@
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
+    "@mikro-orm/cli": "^6.6.7",
+    "@mikro-orm/migrations": "^6.6.7",
     "@nestjs/cli": "^10.0.0",
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
