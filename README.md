@@ -41,6 +41,27 @@ $ pnpm install
 > $ pnpm approve-builds
 > ```
 
+## Database Setup
+
+Before running the service, you need to create the database schema:
+
+```bash
+# Generate the initial migration
+$ pnpm run db:generate --initial
+
+# Run the migration to create tables
+$ pnpm run db:migrate
+```
+
+This will create the `file_record` table in your SQLite database.
+
+### Available Database Scripts
+
+- `db:generate` - Generate a new migration from entity changes
+- `db:migrate` - Apply pending migrations
+- `db:rollback` - Rollback the last migration
+- `db:reset` - Drop all tables and re-run all migrations
+
 ## Configuration
 
 1. Copy the example environment file:
@@ -80,6 +101,8 @@ DATABASE_PATH=data/tracking.db
    - Or use a group chat ID to send to a group
 
 ## Running the Service
+
+**Important**: Make sure you've run `pnpm run db:migrate` before starting the service.
 
 ```bash
 # Development mode (with auto-reload)
@@ -198,8 +221,9 @@ $ pm2 startup
 
 ### Database Errors
 - Ensure `data/` folder exists and is writable
+- Run database migrations: `pnpm run db:migrate`
+- If you see "no such table" errors, run `pnpm run db:generate --initial` then `pnpm run db:migrate`
 - Check disk space availability
-- Verify MikroORM migrations are up to date
 
 ### Timezone Issues
 - Confirm `TIMEZONE` is set correctly (default: `Europe/Kiev`)
